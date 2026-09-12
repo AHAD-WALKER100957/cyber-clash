@@ -911,14 +911,37 @@ async function getAllTeams(){
 function blankTeam(id,name){
   return {
     id: id, name: name, createdAt: Date.now(),
-    r1:{done:false, score:0, answers:[]},
+    r1:{done:false, score:0, answers:[], startedAt:null, finishedAt:null, durationMs:null},
     r2:{done:false, score:0, solvedStages:0, stageTimestamps:[], finishedAt:null},
     r3:{submitted:false, judged:false, writeups:[], scores:[0,0,0]},
     r4:{done:false, score:0, solvedFlags:[false,false,false,false], finishedAt:null}
   };
 }
-function totalScore(t){
-  return (t.r1?.score||0)+(t.r2?.score||0)+(t.r3?.scores?.reduce((a,b)=>a+b,0)||0)+(t.r4?.score||0);
+
+/* Fast Fingers First (Round 1): whichever team completes the whole 20-question
+   quiz in the least time (from their own Start Quiz click to their last
+   answer) gets a bonus. Recomputed live from every team's r1.durationMs, so
+   it updates automatically as more teams finish and needs no extra backend
+   state beyond what's already stored per-team. */
+const FAST_FINGERS_BONUS = 5;
+function fastestR1TeamId(teams){
+  let best = null;
+  for(const t of teams){
+    if(t.r1 && t.r1.done && typeof t.r1.durationMs === "number"){
+      if(!best || t.r1.durationMs < best.r1.durationMs) best = t;
+    }
+  }
+  return best ? best.id : null;
+}
+function totalScore(t, fastestId){
+  const base = (t.r1?.score||0)+(t.r2?.score||0)+(t.r3?.scores?.reduce((a,b)=>a+b,0)||0)+(t.r4?.score||0);
+  const bonus = (fastestId && t.id === fastestId) ? FAST_FINGERS_BONUS : 0;
+  return base + bonus;
+}
+function fastFingersBadge(t, fastestId){
+  return (fastestId && t.id === fastestId)
+    ? ' <span class="medal g" title="Fastest Round 1 finish — +'+FAST_FINGERS_BONUS+' bonus" style="font-size:10px;padding:2px 6px;">⚡ +'+FAST_FINGERS_BONUS+'</span>'
+    : '';
 }
 
 /* =========================================================
@@ -1080,7 +1103,9 @@ async function refreshDashboard(){
   document.getElementById("dashChip").textContent = currentTeam.id.slice(0,2);
   document.getElementById("dashTeamName").textContent = currentTeam.name;
   document.getElementById("dashTeamId").textContent = "ID "+currentTeam.id;
-  document.getElementById("dashTotal").textContent = totalScore(currentTeam);
+  const allTeamsForDash = await getAllTeams();
+  const fastestIdForDash = fastestR1TeamId(allTeamsForDash);
+  document.getElementById("dashTotal").innerHTML = totalScore(currentTeam, fastestIdForDash) + fastFingersBadge(currentTeam, fastestIdForDash);
   document.getElementById("dashR1").innerHTML = currentTeam.r1.score+'<span style="font-size:13px;color:var(--text-faint);"> / 80</span>';
   document.getElementById("dashR2").innerHTML = currentTeam.r2.score+'<span style="font-size:13px;color:var(--text-faint);"> / 25</span>';
   const r3total = currentTeam.r3.scores.reduce((a,b)=>a+b,0);
@@ -1138,6 +1163,10 @@ async function enterRound1(){
   }
   document.getElementById("r1Play").style.display = "block";
   r1State = { qi:0, score:0, timer:null, timeLeft:30, locked:false };
+  if(!currentTeam.r1.startedAt){
+    currentTeam.r1.startedAt = Date.now();
+    await setTeam(currentTeam);
+  }
   showR1Question();
 }
 
@@ -1204,10 +1233,11 @@ async function showR1Peek(){
   const overlay = document.getElementById("r1Peek");
   const rows = document.getElementById("r1PeekRows");
   const teams = await getAllTeams();
-  teams.sort((a,b)=> totalScore(b)-totalScore(a));
+  const fastestId = fastestR1TeamId(teams);
+  teams.sort((a,b)=> totalScore(b,fastestId)-totalScore(a,fastestId));
   const top3 = teams.slice(0,3);
   rows.innerHTML = top3.length ? top3.map((t,i)=>
-    '<div class="peek-row"><span>'+(i+1)+'. '+t.name+'</span><span>'+totalScore(t)+' pts</span></div>'
+    '<div class="peek-row"><span>'+(i+1)+'. '+t.name+fastFingersBadge(t,fastestId)+'</span><span>'+totalScore(t,fastestId)+' pts</span></div>'
   ).join("") : '<div class="peek-row"><span>Standings building...</span><span>—</span></div>';
   overlay.style.display = "flex";
   await new Promise(r=>setTimeout(r, 5000));
@@ -1216,6 +1246,8 @@ async function showR1Peek(){
 async function finishR1(){
   currentTeam.r1.done = true;
   currentTeam.r1.score = r1State.score;
+  currentTeam.r1.finishedAt = Date.now();
+  currentTeam.r1.durationMs = currentTeam.r1.startedAt ? (currentTeam.r1.finishedAt - currentTeam.r1.startedAt) : null;
   await setTeam(currentTeam);
   document.getElementById("r1Play").style.display = "none";
   document.getElementById("r1Done").style.display = "block";
@@ -1536,11 +1568,12 @@ async function renderLeaderboard(){
   document.getElementById("lbHiddenNote").style.display = "none";
 
   let teams = await getAllTeams();
+  const fastestId = fastestR1TeamId(teams);
   const q = (document.getElementById("lbSearch").value||"").toLowerCase();
   if(q) teams = teams.filter(t=> t.id.toLowerCase().includes(q) || t.name.toLowerCase().includes(q));
 
   teams.sort((a,b)=>{
-    const diff = totalScore(b)-totalScore(a);
+    const diff = totalScore(b,fastestId)-totalScore(a,fastestId);
     if(diff !== 0) return diff;
     const at = a.r4.finishedAt || a.r3.submittedAt || a.r2.finishedAt || Infinity;
     const bt = b.r4.finishedAt || b.r3.submittedAt || b.r2.finishedAt || Infinity;
@@ -1558,13 +1591,13 @@ async function renderLeaderboard(){
     const r3total = t.r3.scores.reduce((a,b)=>a+b,0);
     return `<tr class="${isMe?'me':''}">
       <td class="rank">${medal}${rank}</td>
-      <td class="tname">${t.name}</td>
+      <td class="tname">${t.name}${fastFingersBadge(t,fastestId)}</td>
       <td>${t.id}</td>
       <td>${t.r1.score}</td>
       <td>${t.r2.score}</td>
       <td>${r3total}</td>
       <td>${t.r4.score}</td>
-      <td class="total">${totalScore(t)}</td>
+      <td class="total">${totalScore(t,fastestId)}</td>
     </tr>`;
   }).join("") || '<tr><td colspan="8" style="text-align:center;color:var(--text-faint);">No teams registered yet</td></tr>';
 }
@@ -1589,7 +1622,8 @@ async function refreshAdmin(){
   document.getElementById("adminRevealBtn").className = "smallbtn"+(st.leaderboardRevealed?" on":"");
 
   const teams = await getAllTeams();
-  teams.sort((a,b)=>totalScore(b)-totalScore(a));
+  const fastestId = fastestR1TeamId(teams);
+  teams.sort((a,b)=>totalScore(b,fastestId)-totalScore(a,fastestId));
 
   const judgeBody = document.getElementById("judgeBody");
   const submitted = teams.filter(t=>t.r3.submitted);
@@ -1610,7 +1644,7 @@ async function refreshAdmin(){
   const teamsBody = document.getElementById("adminTeamsBody");
   teamsBody.innerHTML = teams.length ? teams.map(t=>{
     const r3total = t.r3.scores.reduce((a,b)=>a+b,0);
-    return `<tr><td>${t.id}</td><td>${t.name}</td><td>${t.r1.score}</td><td>${t.r2.score}</td><td>${r3total}</td><td>${t.r4.score}</td><td><b>${totalScore(t)}</b></td></tr>`;
+    return `<tr><td>${t.id}</td><td>${t.name}${fastFingersBadge(t,fastestId)}</td><td>${t.r1.score}</td><td>${t.r2.score}</td><td>${r3total}</td><td>${t.r4.score}</td><td><b>${totalScore(t,fastestId)}</b></td></tr>`;
   }).join("") : '<tr><td colspan="7" style="color:var(--text-faint);">No teams yet</td></tr>';
 }
 async function saveJudgeScore(teamId){

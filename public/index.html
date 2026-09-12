@@ -1,0 +1,1660 @@
+<!DOCTYPE html>
+<html lang="en" data-mode="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cyber Clash — Engineers Day 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#070B10;
+    --panel:#0D131A;
+    --panel-2:#121A23;
+    --line:#1E2B36;
+    --line-strong:#2C3E4C;
+    --text:#E7F3EC;
+    --text-dim:#8CA0A8;
+    --text-faint:#54666E;
+    --phosphor:#3CFF9E;
+    --phosphor-dim:#1D8F5A;
+    --cyan:#35D6FF;
+    --cyan-dim:#1B7A94;
+    --danger:#FF5B4D;
+    --danger-dim:#9B342A;
+    --violet:#B98CFF;
+    --violet-dim:#6E4FA8;
+    --gold:#FFC24B;
+    --accent:var(--phosphor);
+    --accent-dim:var(--phosphor-dim);
+    --radius:6px;
+    --font-display:'Chakra Petch',sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--void);
+    color:var(--text);
+    font-family:var(--font-mono);
+    font-size:15px;
+    line-height:1.65;
+    min-height:100vh;
+    overflow-x:hidden;
+    position:relative;
+  }
+  ::selection{background:var(--accent);color:var(--void);}
+  a{color:var(--accent);}
+  h1,h2,h3,h4{font-family:var(--font-display);font-weight:600;margin:0;letter-spacing:.01em;}
+  p{margin:0 0 1em;color:var(--text-dim);}
+  #bgCanvas{position:fixed;inset:0;width:100%;height:100%;z-index:0;opacity:.5;pointer-events:none;}
+  #scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:repeating-linear-gradient(180deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,.12) 3px);
+    mix-blend-mode:multiply;opacity:.35;}
+  #vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.55) 100%);}
+
+  /* ---------- NAV ---------- */
+  #topnav{
+    position:fixed;top:0;left:0;right:0;z-index:50;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 28px;
+    background:rgba(7,11,16,.82);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .logo{font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:.03em;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;}
+  .logo .slashes{color:var(--accent);}
+  .logo .blip{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:blip 1.6s ease-in-out infinite;}
+  @keyframes blip{0%,100%{opacity:1;}50%{opacity:.25;}}
+  #navlinks{display:flex;align-items:center;gap:6px;}
+  .navlink{
+    font-family:var(--font-mono);font-size:13px;color:var(--text-dim);
+    padding:8px 14px;border-radius:var(--radius);cursor:pointer;
+    border:1px solid transparent;transition:all .15s ease;
+    background:none;
+  }
+  .navlink:hover{color:var(--text);border-color:var(--line-strong);}
+  .navlink.active{color:var(--accent);border-color:var(--accent-dim);}
+  .navlink.cta{color:var(--void);background:var(--accent);font-weight:600;}
+  .navlink.cta:hover{background:var(--text);}
+  #liveState{
+    display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-faint);
+    padding:6px 12px;border:1px solid var(--line);border-radius:20px;margin-right:8px;
+  }
+  #liveState .dot{width:7px;height:7px;border-radius:50%;background:var(--text-faint);}
+  #liveState.on .dot{background:var(--danger);box-shadow:0 0 6px var(--danger);animation:blip 1s infinite;}
+  #liveState.on{color:var(--danger);border-color:var(--danger-dim);}
+
+  /* ---------- LAYOUT ---------- */
+  #app{position:relative;z-index:2;padding-top:64px;}
+  .screen{display:none;}
+  .screen.active{display:block;animation:fadeIn .4s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px;}
+  .wrap-narrow{max-width:760px;margin:0 auto;padding:0 28px;}
+  section.block{padding:88px 0;}
+  .eyebrow{font-size:12px;color:var(--accent);font-family:var(--font-mono);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .eyebrow::before{content:'';width:24px;height:1px;background:var(--accent);display:inline-block;}
+  .divider{height:1px;background:linear-gradient(90deg,var(--line-strong),transparent);margin:0;}
+
+  /* ---------- HERO ---------- */
+  #hero{min-height:92vh;display:flex;flex-direction:column;justify-content:center;position:relative;padding:120px 0 60px;}
+  .hero-tag{
+    display:inline-flex;align-items:center;gap:10px;font-size:12px;color:var(--text-dim);
+    border:1px solid var(--line-strong);padding:7px 14px;border-radius:20px;margin-bottom:28px;
+    width:fit-content;
+  }
+  .hero-tag b{color:var(--accent);font-weight:600;}
+  h1.glitch{
+    font-size:clamp(48px,9vw,108px);
+    line-height:.94;
+    color:var(--text);
+    text-transform:uppercase;
+    position:relative;
+    margin-bottom:22px;
+    text-shadow:0 0 30px rgba(60,255,158,.15);
+  }
+  h1.glitch span{position:relative;display:inline-block;}
+  h1.glitch .g2{color:var(--accent);}
+  .hero-sub{font-size:17px;color:var(--text-dim);max-width:560px;margin-bottom:36px;}
+  .hero-sub .accent{color:var(--text);}
+  .hero-ctas{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:56px;}
+  .btn{
+    font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:.02em;
+    padding:15px 28px;border-radius:var(--radius);cursor:pointer;border:1px solid var(--line-strong);
+    background:none;color:var(--text);display:inline-flex;align-items:center;gap:10px;
+    transition:all .15s ease;
+  }
+  .btn:hover{border-color:var(--accent);color:var(--accent);}
+  .btn.primary{background:var(--accent);color:var(--void);border-color:var(--accent);}
+  .btn.primary:hover{background:var(--text);border-color:var(--text);color:var(--void);}
+  .btn.danger{border-color:var(--danger-dim);color:var(--danger);}
+  .btn.danger:hover{background:var(--danger);color:var(--void);}
+  .btn:disabled{opacity:.35;cursor:not-allowed;}
+  .btn:disabled:hover{border-color:var(--line-strong);color:var(--text);}
+
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .stat{padding:22px 0;border-right:1px solid var(--line);}
+  .stat:last-child{border-right:none;}
+  .stat b{display:block;font-family:var(--font-display);font-size:28px;color:var(--text);}
+  .stat span{font-size:12px;color:var(--text-faint);}
+
+  /* ---------- ROUND CARDS ---------- */
+  .round-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-top:40px;}
+  .round-card{background:var(--panel);padding:28px 22px;position:relative;min-height:280px;display:flex;flex-direction:column;cursor:default;transition:background .2s ease;}
+  .round-card:hover{background:var(--panel-2);}
+  .round-card .rnum{font-family:var(--font-display);font-size:13px;color:var(--rc-color,var(--accent));margin-bottom:16px;}
+  .round-card h3{font-size:19px;margin-bottom:10px;color:var(--text);}
+  .round-card p{font-size:13px;color:var(--text-dim);flex:1;}
+  .round-card .rmeta{display:flex;justify-content:space-between;font-size:11px;color:var(--text-faint);border-top:1px solid var(--line);padding-top:12px;margin-top:14px;}
+  .round-card .rmeta b{color:var(--rc-color,var(--accent));}
+  .r1c{--rc-color:var(--phosphor);}
+  .r2c{--rc-color:var(--cyan);}
+  .r3c{--rc-color:var(--danger);}
+  .r4c{--rc-color:var(--violet);}
+
+  /* ---------- TIMELINE ---------- */
+  .tl{border-left:1px solid var(--line-strong);margin-left:6px;}
+  .tl-item{position:relative;padding:0 0 30px 28px;}
+  .tl-item::before{content:'';position:absolute;left:-5px;top:4px;width:9px;height:9px;border-radius:50%;background:var(--void);border:2px solid var(--accent);}
+  .tl-item .tt{font-family:var(--font-mono);font-size:12px;color:var(--accent);margin-bottom:4px;}
+  .tl-item h4{font-size:15px;color:var(--text);margin-bottom:3px;}
+  .tl-item .to{font-size:12px;color:var(--text-faint);}
+
+  /* ---------- CREDITS ---------- */
+  .crew-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-top:36px;}
+  .crew-card{background:var(--panel);padding:22px;}
+  .crew-card .role{font-size:11px;color:var(--accent);margin-bottom:6px;}
+  .crew-card .name{font-family:var(--font-display);font-size:17px;color:var(--text);}
+  .crew-note{margin-top:20px;font-size:12px;color:var(--text-faint);}
+
+  footer{border-top:1px solid var(--line);padding:40px 0;position:relative;z-index:2;}
+  .foot-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;}
+  .foot-links{display:flex;gap:18px;font-size:12px;}
+  .foot-links a{color:var(--text-faint);text-decoration:none;}
+  .foot-links a:hover{color:var(--text-dim);}
+
+  /* ---------- LOGIN ---------- */
+  .auth-shell{min-height:88vh;display:flex;align-items:center;justify-content:center;padding:100px 20px 40px;}
+  .auth-card{width:100%;max-width:440px;background:var(--panel);border:1px solid var(--line-strong);border-radius:10px;padding:38px 34px;position:relative;}
+  .auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent);}
+  .auth-head{margin-bottom:26px;}
+  .auth-head .tag{font-size:11px;color:var(--accent);margin-bottom:8px;}
+  .auth-head h2{font-size:24px;}
+  .field{margin-bottom:18px;}
+  .field label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:7px;}
+  .field input{
+    width:100%;background:var(--void);border:1px solid var(--line-strong);border-radius:var(--radius);
+    color:var(--text);font-family:var(--font-mono);font-size:14px;padding:12px 14px;
+  }
+  .field input:focus{outline:none;border-color:var(--accent);}
+  .field .hint{font-size:11px;color:var(--text-faint);margin-top:6px;}
+  .err-text{font-size:12px;color:var(--danger);margin-top:8px;display:none;}
+  .err-text.show{display:block;}
+
+  /* ---------- DASHBOARD ---------- */
+  .dash-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:20px;margin-bottom:40px;}
+  .id-badge{background:var(--panel);border:1px solid var(--line-strong);border-radius:8px;padding:18px 22px;display:flex;align-items:center;gap:16px;}
+  .id-badge .chip{width:44px;height:44px;border-radius:6px;background:var(--accent);color:var(--void);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:16px;}
+  .id-badge .tname{font-family:var(--font-display);font-size:17px;color:var(--text);}
+  .id-badge .tid{font-size:11px;color:var(--text-faint);}
+  .total-score{text-align:right;}
+  .total-score b{font-family:var(--font-display);font-size:38px;color:var(--accent);display:block;}
+  .total-score span{font-size:11px;color:var(--text-faint);}
+
+  .prog-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);}
+  .prog-card{background:var(--panel);padding:20px;}
+  .prog-card .pname{font-size:12px;color:var(--text-dim);margin-bottom:8px;}
+  .prog-card .pscore{font-family:var(--font-display);font-size:24px;color:var(--text);}
+  .prog-card .pstate{font-size:11px;margin-top:8px;padding:4px 9px;border-radius:12px;display:inline-block;}
+  .pstate.locked{color:var(--text-faint);border:1px solid var(--line-strong);}
+  .pstate.live{color:var(--danger);border:1px solid var(--danger-dim);}
+  .pstate.done{color:var(--phosphor);border:1px solid var(--phosphor-dim);}
+  .pstate.pending{color:var(--gold);border:1px solid #8a6a1c;}
+
+  /* ---------- ROUND SHELL ---------- */
+  .round-shell{min-height:88vh;padding:104px 0 60px;}
+  .round-head{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-bottom:34px;padding-bottom:22px;border-bottom:1px solid var(--line);}
+  .round-head .rlabel{font-size:12px;color:var(--accent);margin-bottom:6px;}
+  .round-head h2{font-size:30px;}
+  .round-timer{font-family:var(--font-display);font-size:34px;color:var(--accent);text-align:right;}
+  .round-timer span{display:block;font-size:11px;font-family:var(--font-mono);color:var(--text-faint);}
+
+  .lockcard{background:var(--panel);border:1px dashed var(--line-strong);border-radius:10px;padding:60px 40px;text-align:center;}
+  .lockcard i.lockicon{display:block;font-size:0;}
+  .lockcard h3{font-size:22px;margin-bottom:10px;}
+  .lockcard p{max-width:420px;margin:0 auto;}
+
+  /* quiz */
+  .qcard{background:var(--panel);border:1px solid var(--line-strong);border-radius:10px;padding:36px;}
+  .qmeta{display:flex;justify-content:space-between;font-size:12px;color:var(--text-faint);margin-bottom:18px;}
+  .qbar{height:5px;background:var(--panel-2);border-radius:3px;overflow:hidden;margin-bottom:26px;border:1px solid var(--line);}
+  .qbar-fill{height:100%;background:var(--accent);width:100%;transition:width 1s linear,background .3s;}
+  .qtext{font-family:var(--font-display);font-size:23px;color:var(--text);margin-bottom:26px;}
+  .qopts{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .qopt{background:var(--panel-2);border:1px solid var(--line-strong);border-radius:var(--radius);padding:16px 18px;font-size:14px;cursor:pointer;transition:all .12s ease;display:flex;gap:10px;align-items:center;}
+  .qopt:hover{border-color:var(--accent);}
+  .qopt .qk{color:var(--accent);font-weight:600;}
+  .qopt.picked{border-color:var(--accent);background:rgba(60,255,158,.08);}
+  .qopt.disabled{pointer-events:none;opacity:.5;}
+  .peek-overlay{position:fixed;inset:0;background:rgba(4,7,10,.9);z-index:100;display:flex;align-items:center;justify-content:center;}
+  .peek-card{background:var(--panel);border:1px solid var(--accent);border-radius:10px;padding:30px 40px;text-align:center;min-width:320px;}
+  .peek-card h4{font-size:12px;color:var(--accent);margin-bottom:16px;}
+  .peek-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;}
+  .peek-row:last-child{border-bottom:none;}
+
+  /* crypto */
+  .stage-list{display:flex;flex-direction:column;gap:14px;}
+  .stage{background:var(--panel);border:1px solid var(--line-strong);border-radius:10px;padding:24px 28px;opacity:.4;}
+  .stage.unlocked{opacity:1;}
+  .stage.solved{border-color:var(--cyan-dim);background:rgba(53,214,255,.04);}
+  .stage-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .stage-top .sname{font-family:var(--font-display);font-size:16px;}
+  .stage-top .stype{font-size:11px;color:var(--cyan);border:1px solid var(--cyan-dim);padding:3px 9px;border-radius:12px;}
+  .given{font-family:var(--font-mono);font-size:17px;letter-spacing:.06em;background:var(--void);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin:12px 0;word-break:break-all;color:var(--cyan);}
+  .stage-input-row{display:flex;gap:10px;}
+  .stage-input-row input{flex:1;background:var(--void);border:1px solid var(--line-strong);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);padding:12px 14px;font-size:14px;text-transform:uppercase;}
+  .stage-input-row input:focus{outline:none;border-color:var(--cyan);}
+  .solved-tag{font-size:12px;color:var(--phosphor);display:flex;align-items:center;gap:8px;}
+
+  /* bug hunt */
+  .snippet-card{background:var(--panel);border:1px solid var(--line-strong);border-radius:10px;padding:26px;margin-bottom:20px;}
+  .snippet-head{display:flex;justify-content:space-between;margin-bottom:14px;}
+  .snippet-head .sid{font-family:var(--font-display);font-size:15px;color:var(--danger);}
+  pre.code{background:var(--void);border:1px solid var(--line);border-radius:var(--radius);padding:18px;overflow-x:auto;font-size:13px;color:#d8e6de;margin:0 0 18px;}
+  .subfield{margin-bottom:12px;}
+  .subfield label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:6px;}
+  .subfield input,.subfield textarea{
+    width:100%;background:var(--void);border:1px solid var(--line-strong);border-radius:var(--radius);
+    color:var(--text);font-family:var(--font-mono);font-size:13px;padding:10px 12px;resize:vertical;
+  }
+  .subfield textarea{min-height:64px;}
+  .subfield input:focus,.subfield textarea:focus{outline:none;border-color:var(--danger);}
+
+  /* ctf */
+  .flag-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .flag-card{background:var(--panel);border:1px solid var(--line-strong);border-radius:10px;padding:24px;}
+  .flag-card.solved{border-color:var(--violet-dim);background:rgba(185,140,255,.05);}
+  .flag-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .flag-top .fname{font-family:var(--font-display);font-size:15px;}
+  .flag-top .fpts{font-size:11px;color:var(--violet);}
+  .flag-desc{font-size:13px;margin-bottom:14px;}
+  .dossier{background:var(--void);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;font-size:12.5px;margin-bottom:14px;color:var(--text-dim);}
+  .dossier b{color:var(--text);}
+  .flag-input-row{display:flex;gap:8px;}
+  .flag-input-row input{flex:1;background:var(--void);border:1px solid var(--line-strong);border-radius:var(--radius);color:var(--violet);font-family:var(--font-mono);padding:11px 12px;font-size:13px;}
+  .flag-input-row input:focus{outline:none;border-color:var(--violet);}
+  .leak-banner{position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-140%);z-index:90;
+    background:var(--danger);color:#2b0805;padding:16px 26px;border-radius:8px;max-width:600px;width:92%;
+    box-shadow:0 10px 40px rgba(255,91,77,.35);transition:transform .5s cubic-bezier(.16,1,.3,1);}
+  .leak-banner.show{transform:translateX(-50%) translateY(0);}
+  .leak-banner .ltag{font-size:11px;font-weight:700;letter-spacing:.05em;margin-bottom:4px;}
+  .leak-banner .ltxt{font-size:14px;font-weight:500;}
+
+  /* leaderboard */
+  .lb-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+  .lb-search{background:var(--panel);border:1px solid var(--line-strong);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);padding:10px 14px;font-size:13px;width:220px;}
+  table.lb{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line-strong);border-radius:10px;overflow:hidden;}
+  table.lb th{text-align:left;font-size:11px;color:var(--text-faint);padding:14px 16px;border-bottom:1px solid var(--line-strong);background:var(--panel-2);}
+  table.lb td{padding:14px 16px;font-size:13px;border-bottom:1px solid var(--line);color:var(--text-dim);}
+  table.lb tr:last-child td{border-bottom:none;}
+  table.lb tr.me{background:rgba(60,255,158,.06);}
+  table.lb td.rank{font-family:var(--font-display);color:var(--text);font-size:16px;}
+  table.lb td.tname{color:var(--text);font-weight:600;}
+  table.lb td.total{font-family:var(--font-display);color:var(--accent);font-size:16px;}
+  .medal{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;margin-right:6px;}
+  .medal.g{background:#3a2f10;color:var(--gold);}
+  .medal.s{background:#2a2e33;color:#cfd8dc;}
+  .medal.b{background:#3a2416;color:#e5905a;}
+  .lb-hidden{background:var(--panel);border:1px dashed var(--line-strong);border-radius:10px;padding:70px 30px;text-align:center;}
+
+  /* admin */
+  .admin-grid{display:grid;grid-template-columns:280px 1fr;gap:24px;align-items:start;}
+  .admin-panel{background:var(--panel);border:1px solid var(--line-strong);border-radius:10px;padding:22px;}
+  .admin-panel h4{font-size:12px;color:var(--accent);margin-bottom:14px;}
+  .admin-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;}
+  .admin-row:last-child{border-bottom:none;}
+  .roundbtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;}
+  .smallbtn{font-family:var(--font-mono);font-size:11px;padding:7px 11px;border-radius:4px;border:1px solid var(--line-strong);background:var(--void);color:var(--text-dim);cursor:pointer;}
+  .smallbtn:hover{border-color:var(--accent);color:var(--accent);}
+  .smallbtn.on{background:var(--accent);color:var(--void);border-color:var(--accent);}
+  table.judge{width:100%;border-collapse:collapse;font-size:12px;}
+  table.judge th,table.judge td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;}
+  table.judge input{width:52px;background:var(--void);border:1px solid var(--line-strong);color:var(--text);font-family:var(--font-mono);padding:5px 7px;border-radius:4px;font-size:12px;}
+
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:var(--panel);border:1px solid var(--accent);border-radius:var(--radius);padding:13px 22px;
+    font-size:13px;color:var(--text);z-index:200;transition:all .25s ease;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  [data-theme="r2"]{--accent:var(--cyan);--accent-dim:var(--cyan-dim);}
+  [data-theme="r3"]{--accent:var(--danger);--accent-dim:var(--danger-dim);}
+  [data-theme="r4"]{--accent:var(--violet);--accent-dim:var(--violet-dim);}
+
+  @media (max-width:900px){
+    .round-grid{grid-template-columns:1fr 1fr;}
+    .crew-grid{grid-template-columns:1fr 1fr;}
+    .stat-row{grid-template-columns:1fr 1fr;}
+    .prog-grid{grid-template-columns:1fr 1fr;}
+    .admin-grid{grid-template-columns:1fr;}
+    .qopts{grid-template-columns:1fr;}
+    .flag-grid{grid-template-columns:1fr;}
+    #navlinks .navlink.hide-mobile{display:none;}
+  }
+</style>
+</head>
+<body data-theme="r1">
+<canvas id="bgCanvas"></canvas>
+<div id="scanlines"></div>
+<div id="vignette"></div>
+
+<nav id="topnav">
+  <div class="logo" onclick="go('landing')"><span class="slashes">CYBER</span>//<span>CLASH</span><span class="blip"></span></div>
+  <div id="navlinks">
+    <div id="liveState"><span class="dot"></span><span id="liveStateText">STANDBY</span></div>
+    <button class="navlink hide-mobile" onclick="go('landing')">home</button>
+    <button class="navlink hide-mobile" onclick="go('leaderboard')">leaderboard</button>
+    <button class="navlink" id="navDashBtn" onclick="go('dashboard')" style="display:none;">dashboard</button>
+    <button class="navlink cta" id="navLoginBtn" onclick="go('login')">team login</button>
+  </div>
+</nav>
+
+<div id="app">
+
+<!-- ================= LANDING ================= -->
+<section class="screen active" id="screen-landing">
+
+  <div id="hero" class="wrap">
+    <div class="hero-tag"><span class="blip" style="width:6px;height:6px;border-radius:50%;background:var(--accent);"></span> Engineers Day &nbsp;·&nbsp; <b>23 September 2026</b> &nbsp;·&nbsp; CE / IT Department</div>
+    <h1 class="glitch" id="glitchTitle"><span>CYBER</span> <span class="g2">CLASH</span></h1>
+    <p class="hero-sub">A four-round live operation in networks, ciphers, exploits and digital forensics. <span class="accent">Teams of 2–3.</span> One cumulative scoreboard. One case to crack by the end of the night.</p>
+    <div class="hero-ctas">
+      <button class="btn primary" onclick="go('login')">Enter the grid →</button>
+      <button class="btn" onclick="document.getElementById('rounds-anchor').scrollIntoView({behavior:'smooth'})">See the four rounds</button>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><b>4</b><span>rounds, cumulative</span></div>
+      <div class="stat"><b>179</b><span>points on the table</span></div>
+      <div class="stat"><b>2–3</b><span>per team</span></div>
+      <div class="stat"><b>₹69</b><span>entry, per head</span></div>
+    </div>
+  </div>
+
+  <section class="block" id="rounds-anchor">
+    <div class="wrap">
+      <div class="eyebrow">the operation</div>
+      <h2 style="font-size:34px;max-width:640px;">Four rounds. Score carries forward from the first question to the last flag.</h2>
+      <p style="max-width:600px;margin-top:14px;">No team is eliminated between rounds — every point earned in Round 1 still counts when the final flag is submitted in Round 4. Difficulty climbs each round; so does the noise in the room.</p>
+
+      <div class="round-grid">
+        <div class="round-card r1c">
+          <div class="rnum">ROUND 01</div>
+          <h3>Cyber Quiz</h3>
+          <p>Rapid-fire multiple choice on networking, malware, authentication and core security fundamentals. Thirty seconds a question — guess if you must, there's no penalty.</p>
+          <div class="rmeta"><span>15 min</span><b>/80 pts</b></div>
+        </div>
+        <div class="round-card r2c">
+          <div class="rnum">ROUND 02</div>
+          <h3>Crypto Crack</h3>
+          <p>Five progressive ciphers — Caesar, Base64, hex, Morse, Vigenère. Cracking one hands you the key to the next. Pen and paper only.</p>
+          <div class="rmeta"><span>25 min</span><b>/25 pts</b></div>
+        </div>
+        <div class="round-card r3c">
+          <div class="rnum">ROUND 03</div>
+          <h3>Bug &amp; Vulnerability Hunt</h3>
+          <p>Three real-world-style code snippets. Spot the flaw, explain the risk, write the fix. This is where genuine security instinct separates the field.</p>
+          <div class="rmeta"><span>30 min</span><b>/24 pts</b></div>
+        </div>
+        <div class="round-card r4c">
+          <div class="rnum">ROUND 04</div>
+          <h3>Cyber Detective / CTF</h3>
+          <p>A four-flag capture-the-flag: OSINT, steganography, log analysis, file forensics. Expect live bulletins from HQ mid-round. Nobody sits this one out quietly.</p>
+          <div class="rmeta"><span>35 min</span><b>/50 pts</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="eyebrow">run of show</div>
+      <h2 style="font-size:34px;max-width:600px;">How the night moves.</h2>
+      <div style="margin-top:44px;max-width:640px;" class="tl">
+        <div class="tl-item"><div class="tt">T-30 min</div><h4>Reporting &amp; check-in</h4><div class="to">Team numbering and seating</div></div>
+        <div class="tl-item"><div class="tt">0:00 – 0:05</div><h4>Welcome &amp; rules briefing</h4><div class="to">Judging criteria read aloud</div></div>
+        <div class="tl-item"><div class="tt">0:05 – 0:20</div><h4>Round 1 — Cyber Quiz</h4><div class="to">15 minutes</div></div>
+        <div class="tl-item"><div class="tt">0:25 – 0:50</div><h4>Round 2 — Crypto Crack</h4><div class="to">25 minutes</div></div>
+        <div class="tl-item"><div class="tt">0:55 – 1:25</div><h4>Round 3 — Bug &amp; Vulnerability Hunt</h4><div class="to">30 minutes</div></div>
+        <div class="tl-item"><div class="tt">1:30 – 2:05</div><h4>Round 4 — Cyber Detective / CTF</h4><div class="to">35 minutes</div></div>
+        <div class="tl-item"><div class="tt">2:05 – 2:15</div><h4>Score compilation &amp; winners announced</h4><div class="to">Third, then second, then first</div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="eyebrow">mission control</div>
+      <h2 style="font-size:34px;max-width:600px;">The people running the operation.</h2>
+      <div class="crew-grid">
+        <div class="crew-card"><div class="role">Overall Student Coordinator</div><div class="name">Ahad Bharucha</div></div>
+        <div class="crew-card"><div class="role">Technical &amp; Challenge Coordinator · Faculty Mentor</div><div class="name">Chiragkumar Aboti</div></div>
+        <div class="crew-card"><div class="role">Lab, Systems &amp; Backup</div><div class="name">Danish Chopan &amp; Kirti Bhatt</div></div>
+        <div class="crew-card"><div class="role">Registration &amp; Entries</div><div class="name">Akhilesh Yadav</div></div>
+        <div class="crew-card"><div class="role">Faculty Mentors</div><div class="name">Add your names here</div></div>
+        <div class="crew-card"><div class="role">Student Coordinators &amp; Volunteers</div><div class="name">Add your names here</div></div>
+      </div>
+      <div class="crew-note">Edit the two placeholder cards above with your remaining faculty mentors and student coordinators — search "Add your names here" in the file.</div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section class="block" style="text-align:center;padding-bottom:100px;">
+    <div class="wrap-narrow">
+      <h2 style="font-size:36px;margin-bottom:16px;">Ready to clash?</h2>
+      <p style="margin-bottom:30px;">Register your team, claim your team ID, and step into the grid.</p>
+      <button class="btn primary" onclick="go('login')" style="padding:17px 34px;font-size:15px;">Enter the grid →</button>
+    </div>
+  </section>
+
+</section>
+
+<!-- ================= LOGIN ================= -->
+<section class="screen" id="screen-login">
+  <div class="auth-shell">
+    <div class="auth-card">
+      <div class="auth-head">
+        <div class="tag">TEAM ACCESS</div>
+        <h2>Identify your team</h2>
+      </div>
+      <div class="field">
+        <label>Team ID</label>
+        <input type="text" id="loginTeamId" placeholder="e.g. CC-07" maxlength="12">
+        <div class="hint">Given at check-in. First time here? Pick any short ID — it's yours for the event.</div>
+      </div>
+      <div class="field">
+        <label>Team name</label>
+        <input type="text" id="loginTeamName" placeholder="e.g. Null Pointers" maxlength="30">
+      </div>
+      <div class="err-text" id="loginErr"></div>
+      <button class="btn primary" style="width:100%;justify-content:center;margin-top:8px;" onclick="handleLogin()">Access dashboard →</button>
+      <div style="text-align:center;margin-top:18px;font-size:12px;color:var(--text-faint);">Returning team? Enter the same ID to resume exactly where you left off.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DASHBOARD ================= -->
+<section class="screen" id="screen-dashboard">
+  <div class="round-shell wrap">
+    <div class="dash-top">
+      <div class="id-badge">
+        <div class="chip" id="dashChip">--</div>
+        <div>
+          <div class="tname" id="dashTeamName">—</div>
+          <div class="tid" id="dashTeamId">ID —</div>
+        </div>
+      </div>
+      <div class="total-score">
+        <b id="dashTotal">0</b>
+        <span>total / 179 pts</span>
+      </div>
+    </div>
+
+    <div class="prog-grid">
+      <div class="prog-card">
+        <div class="pname">Round 1 · Cyber Quiz</div>
+        <div class="pscore" id="dashR1">0<span style="font-size:13px;color:var(--text-faint);"> / 80</span></div>
+        <div class="pstate locked" id="dashR1State">locked</div>
+      </div>
+      <div class="prog-card">
+        <div class="pname">Round 2 · Crypto Crack</div>
+        <div class="pscore" id="dashR2">0<span style="font-size:13px;color:var(--text-faint);"> / 25</span></div>
+        <div class="pstate locked" id="dashR2State">locked</div>
+      </div>
+      <div class="prog-card">
+        <div class="pname">Round 3 · Bug Hunt</div>
+        <div class="pscore" id="dashR3">0<span style="font-size:13px;color:var(--text-faint);"> / 24</span></div>
+        <div class="pstate locked" id="dashR3State">locked</div>
+      </div>
+      <div class="prog-card">
+        <div class="pname">Round 4 · CTF</div>
+        <div class="pscore" id="dashR4">0<span style="font-size:13px;color:var(--text-faint);"> / 50</span></div>
+        <div class="pstate locked" id="dashR4State">locked</div>
+      </div>
+    </div>
+
+    <div style="margin-top:40px;display:flex;gap:12px;flex-wrap:wrap;">
+      <button class="btn primary" id="dashEnterBtn" onclick="enterLiveRound()">Start Quiz →</button>
+      <button class="btn" onclick="go('leaderboard')">View leaderboard</button>
+      <button class="btn" onclick="logout()">Log out</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ROUND 1 : QUIZ ================= -->
+<section class="screen" id="screen-round1" data-round-theme="r1">
+  <div class="round-shell wrap-narrow">
+    <div class="round-head">
+      <div>
+        <div class="rlabel">ROUND 01</div>
+        <h2>Cyber Quiz</h2>
+      </div>
+      <div id="r1LockedNote" style="display:none;"></div>
+    </div>
+
+    <div id="r1Locked" class="lockcard">
+      <h3>Round 1 has not gone live yet</h3>
+      <p>Head to your dashboard and wait for the MC to open the round. This page will unlock the moment it does.</p>
+      <button class="btn" style="margin-top:20px;" onclick="go('dashboard')">Back to dashboard</button>
+    </div>
+
+    <div id="r1Play" style="display:none;">
+      <div class="qcard">
+        <div class="qmeta"><span id="r1QIndex">Question 1 / 20</span><span id="r1QScore">Score: 0</span></div>
+        <div class="qbar"><div class="qbar-fill" id="r1Bar"></div></div>
+        <div class="qtext" id="r1QText">—</div>
+        <div class="qopts" id="r1Opts"></div>
+      </div>
+    </div>
+
+    <div id="r1Done" class="lockcard" style="display:none;">
+      <h3>Round 1 complete</h3>
+      <p id="r1DoneScore">—</p>
+      <button class="btn primary" style="margin-top:20px;" onclick="go('dashboard')">Back to dashboard</button>
+    </div>
+  </div>
+
+  <div class="peek-overlay" id="r1Peek" style="display:none;">
+    <div class="peek-card">
+      <h4>CURRENT STANDINGS</h4>
+      <div id="r1PeekRows"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ROUND 2 : CRYPTO ================= -->
+<section class="screen" id="screen-round2" data-round-theme="r2">
+  <div class="round-shell wrap-narrow">
+    <div class="round-head">
+      <div><div class="rlabel">ROUND 02</div><h2>Crypto Crack</h2></div>
+      <div class="round-timer" id="r2Timer">--:--<span>time left</span></div>
+    </div>
+
+    <div id="r2Locked" class="lockcard">
+      <h3>Round 2 has not gone live yet</h3>
+      <p>Solve Round 1 first, then wait here (or on the dashboard) for the crypto packet to open.</p>
+      <button class="btn" style="margin-top:20px;" onclick="go('dashboard')">Back to dashboard</button>
+    </div>
+
+    <div id="r2Play" style="display:none;">
+      <p style="margin-bottom:20px;">Five progressive ciphers. Solving one reveals the next stage. Type your answer and hit enter — everything is case-insensitive.</p>
+      <div class="stage-list" id="r2Stages"></div>
+    </div>
+
+    <div id="r2Done" class="lockcard" style="display:none;">
+      <h3>Round 2 complete</h3>
+      <p id="r2DoneScore">—</p>
+      <button class="btn primary" style="margin-top:20px;" onclick="go('dashboard')">Back to dashboard</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ROUND 3 : BUG HUNT ================= -->
+<section class="screen" id="screen-round3" data-round-theme="r3">
+  <div class="round-shell wrap-narrow">
+    <div class="round-head">
+      <div><div class="rlabel">ROUND 03</div><h2>Bug &amp; Vulnerability Hunt</h2></div>
+      <div class="round-timer" id="r3Timer">--:--<span>time left</span></div>
+    </div>
+
+    <div id="r3Locked" class="lockcard">
+      <h3>Round 3 has not gone live yet</h3>
+      <p>The technical-depth round. Wait for the snippets to be released.</p>
+      <button class="btn" style="margin-top:20px;" onclick="go('dashboard')">Back to dashboard</button>
+    </div>
+
+    <div id="r3Play" style="display:none;">
+      <p style="margin-bottom:20px;">For each snippet: name the vulnerability, explain the real-world risk in 1–2 lines, and give a fix. Submissions are reviewed and scored by the judges — your score will appear on your dashboard once graded.</p>
+      <div id="r3Snippets"></div>
+      <button class="btn primary" style="width:100%;justify-content:center;margin-top:10px;" onclick="submitR3()">Submit for judging →</button>
+    </div>
+
+    <div id="r3Done" class="lockcard" style="display:none;">
+      <h3 id="r3DoneTitle">Submitted — awaiting judge review</h3>
+      <p id="r3DoneScore">Your write-ups are with the judges. Check back on your dashboard for the score.</p>
+      <button class="btn primary" style="margin-top:20px;" onclick="go('dashboard')">Back to dashboard</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ROUND 4 : CTF ================= -->
+<section class="screen" id="screen-round4" data-round-theme="r4">
+  <div class="round-shell wrap-narrow">
+    <div class="round-head">
+      <div><div class="rlabel">ROUND 04</div><h2>Cyber Detective / CTF</h2></div>
+      <div class="round-timer" id="r4Timer">--:--<span>time left</span></div>
+    </div>
+
+    <div id="r4Locked" class="lockcard">
+      <h3>Round 4 has not gone live yet</h3>
+      <p>Four flags. One finale. This screen unlocks the moment the clock starts.</p>
+      <button class="btn" style="margin-top:20px;" onclick="go('dashboard')">Back to dashboard</button>
+    </div>
+
+    <div id="r4Play" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <p style="margin:0;">Flag format: <b style="color:var(--violet);">CyberClash{'{'}...{'}'}</b></p>
+        <div style="font-size:12px;color:var(--text-faint);">Flags captured: <b id="r4Count" style="color:var(--violet);">0</b>/4</div>
+      </div>
+      <div class="flag-grid" id="r4Flags"></div>
+    </div>
+
+    <div id="r4Done" class="lockcard" style="display:none;">
+      <h3>All four flags captured</h3>
+      <p id="r4DoneScore">—</p>
+      <button class="btn primary" style="margin-top:20px;" onclick="go('dashboard')">Back to dashboard</button>
+    </div>
+  </div>
+
+  <div class="leak-banner" id="leakBanner">
+    <div class="ltag">🛰 BULLETIN FROM HQ</div>
+    <div class="ltxt" id="leakText">—</div>
+  </div>
+</section>
+
+<!-- ================= LEADERBOARD ================= -->
+<section class="screen" id="screen-leaderboard">
+  <div class="round-shell wrap">
+    <div class="round-head">
+      <div><div class="rlabel">STANDINGS</div><h2>Leaderboard</h2></div>
+    </div>
+    <div class="lb-toolbar">
+      <input class="lb-search" id="lbSearch" placeholder="Search team ID or name..." oninput="renderLeaderboard()">
+      <div style="font-size:12px;color:var(--text-faint);" id="lbUpdated">—</div>
+    </div>
+    <div id="lbRevealed">
+      <div style="overflow-x:auto;">
+        <table class="lb">
+          <thead><tr><th>Rank</th><th>Team</th><th>ID</th><th>R1</th><th>R2</th><th>R3</th><th>R4</th><th>Total</th></tr></thead>
+          <tbody id="lbBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="lbHiddenNote" class="lb-hidden" style="display:none;">
+      <h3>The scoreboard is sealed</h3>
+      <p>Standings will be revealed live at the closing ceremony — third place first, then second, then the winner.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ADMIN ================= -->
+<section class="screen" id="screen-admin">
+  <div class="round-shell wrap">
+    <div class="round-head"><div><div class="rlabel">RESTRICTED</div><h2>Control room</h2></div></div>
+
+    <div id="adminGate" class="lockcard" style="max-width:420px;margin:0;text-align:left;">
+      <h3 style="margin-bottom:16px;">Coordinator passcode</h3>
+      <div class="field"><input type="password" id="adminPass" placeholder="Enter passcode"></div>
+      <button class="btn primary" onclick="checkAdminPass()">Unlock →</button>
+    </div>
+
+    <div id="adminPanel" style="display:none;">
+      <div class="admin-grid">
+        <div>
+          <div class="admin-panel" style="margin-bottom:20px;">
+            <h4>ROUND CONTROL</h4>
+            <p style="font-size:12px;margin-bottom:10px;">Set which round is currently live. Starting a round timestamps it — used for round timers, insider-leak triggers and fastest-finish bonuses.</p>
+            <div class="roundbtns">
+              <button class="smallbtn" onclick="adminSetRound(0)">Not started</button>
+              <button class="smallbtn" onclick="adminSetRound(1)">Start R1</button>
+              <button class="smallbtn" onclick="adminSetRound(2)">Start R2</button>
+              <button class="smallbtn" onclick="adminSetRound(3)">Start R3</button>
+              <button class="smallbtn" onclick="adminSetRound(4)">Start R4</button>
+              <button class="smallbtn" onclick="adminSetRound(5)">Close event</button>
+            </div>
+            <div class="admin-row"><span>Live round</span><b id="adminLiveRound">0</b></div>
+          </div>
+          <div class="admin-panel">
+            <h4>LEADERBOARD</h4>
+            <div class="admin-row"><span>Public visibility</span>
+              <button class="smallbtn" id="adminRevealBtn" onclick="toggleReveal()">reveal</button>
+            </div>
+            <p style="font-size:11px;margin-top:10px;">Hide until the closing ceremony, then reveal for the big moment.</p>
+          </div>
+          <div class="admin-panel" style="margin-top:20px;border-color:var(--danger-dim);">
+            <h4 style="color:var(--danger);">DANGER ZONE</h4>
+            <button class="btn danger" style="width:100%;justify-content:center;" onclick="adminResetAll()">Reset all event data</button>
+          </div>
+        </div>
+        <div>
+          <div class="admin-panel">
+            <h4>ROUND 3 — JUDGE SCORING</h4>
+            <div style="overflow-x:auto;">
+              <table class="judge" id="judgeTable"><thead><tr><th>Team</th><th>Snippet A write-up</th><th>Snippet B write-up</th><th>Snippet C write-up</th><th>A /8</th><th>B /8</th><th>C /8</th><th></th></tr></thead><tbody id="judgeBody"></tbody></table>
+            </div>
+          </div>
+          <div class="admin-panel" style="margin-top:20px;">
+            <h4>ALL TEAMS</h4>
+            <div style="overflow-x:auto;">
+              <table class="judge" id="adminTeamsTable"><thead><tr><th>ID</th><th>Name</th><th>R1</th><th>R2</th><th>R3</th><th>R4</th><th>Total</th></tr></thead><tbody id="adminTeamsBody"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <div class="wrap foot-row">
+    <div style="font-size:12px;color:var(--text-faint);">CYBER CLASH — Engineers Day, 23 September 2026 · CE / IT Department</div>
+    <div class="foot-links">
+      <a onclick="go('leaderboard')" style="cursor:pointer;">Leaderboard</a>
+      <a onclick="go('admin')" style="cursor:pointer;">Control room</a>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   BACKEND-BACKED STORAGE SHIM
+   Talks to /api/kv (Vercel serverless function) so all teams
+   share the same live event state, no matter who is logged in
+   or which device they're on. This replaces the old in-artifact
+   window.storage with a real HTTP-backed implementation.
+   ========================================================= */
+window.storage = (function(){
+  async function call(action, payload){
+    const res = await fetch("/api/kv", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(Object.assign({action}, payload))
+    });
+    if(!res.ok) throw new Error("storage request failed: "+res.status);
+    return res.json();
+  }
+  return {
+    async get(key, shared){
+      const r = await call("get", {key});
+      return r; // {key, value} or null
+    },
+    async set(key, value, shared){
+      return call("set", {key, value});
+    },
+    async delete(key, shared){
+      return call("delete", {key});
+    },
+    async list(prefix, shared){
+      return call("list", {prefix});
+    }
+  };
+})();
+</script>
+<script>
+/* =========================================================
+   CONFIG / DATA
+   ========================================================= */
+const SALT = "CYBERCLASH2026_SALT_";
+const ADMIN_PASSCODE = "ABOTI2026";
+
+const R1_QUESTIONS = [
+  {q:"Which port does HTTPS use by default?", opts:["80","443","21","25"]},
+  {q:"Malware that disguises itself as legitimate software is called a:", opts:["Worm","Trojan","Ransomware","Spyware"]},
+  {q:"Phishing attacks primarily exploit:", opts:["Software bugs","Human trust","Weak passwords","Network congestion"]},
+  {q:"AES is an example of which type of encryption?", opts:["Asymmetric","Symmetric","Hashing","Steganography"]},
+  {q:"CIA triad stands for Confidentiality, Integrity and:", opts:["Authentication","Availability","Accountability","Anonymity"]},
+  {q:"An attack that floods a server with traffic to make it unavailable:", opts:["Phishing","DDoS","SQL Injection","Man-in-the-middle"]},
+  {q:"A vulnerability unknown to the vendor with no patch available is a:", opts:["Backdoor","Zero-day","Exploit kit","Rootkit"]},
+  {q:"2FA typically combines a password with:", opts:["A username","OTP / biometric","A CAPTCHA","A security question"]},
+  {q:"A network device that filters incoming/outgoing traffic is a:", opts:["Router","Switch","Firewall","Modem"]},
+  {q:"Software that secretly records keystrokes is called a:", opts:["Keylogger","Worm","Adware","Rootkit"]},
+  {q:"A VPN primarily provides:", opts:["Faster internet speed","An encrypted tunnel for your data","Automatic virus removal","Free cloud storage"]},
+  {q:"Unlike encryption, hashing is:", opts:["Reversible with a key","One-way (cannot be reversed)","Only used on images","Always symmetric"]},
+  {q:"Manipulating people into revealing info or breaking procedure is:", opts:["Social engineering","Brute forcing","Spoofing","Tunneling"]},
+  {q:"Malware that encrypts a victim's files and demands payment is:", opts:["Adware","Ransomware","Spyware","A bot"]},
+  {q:"Unlike an IP address, a MAC address is:", opts:["Assigned by DHCP each session","A hardware address burned into the network card","Changed automatically every hour","Used to route traffic across the internet"]},
+  {q:"Port 21 is the default port for:", opts:["SSH","FTP","SMTP","DNS"]},
+  {q:"Port 22 is the default port for:", opts:["SSH","HTTP","FTP","DNS"]},
+  {q:"Port 25 is the default port for:", opts:["SMTP","HTTP","SSH","DNS"]},
+  {q:"Port 53 is the default port for:", opts:["DNS","HTTP","FTP","SSH"]},
+  {q:"Port 80 is the default port for:", opts:["HTTPS","HTTP","FTP","SMTP"]}
+];
+const R1_HASHES = ["6c0f1c14d1cf2c1ffb9169808cd2433f8328fce0d273711df8a28d79b9fa3ef4","c0855ed95dacbba80153e675fe34cc201d26eba73e39f4a9ee46a55d8175b213","ea97b05816fbbff25489d5fd610cc0733bc3d31a5ff4389f3c9448ff7a35ad76","66b19a146e3a7bacd683089b64b07bc9b4d533a1dff7bf2dabda1abf342c0211","5262b855475a70b8b790f957701aa5c9b15ebbcae4e436f9a942e6a959d1ae00","368e8970abf1e06cac0f9c56f73b9b4ad2256680aeec46cfa6fbd2ba3d141369","cdc3cca2a3dab46cac89a38487c4c8a6a9ca0661a441f45fce32008be59d1d5d","b88862af13407f2d7e4c0e28cbff8775e62749c202e75dd66c85e8dc154043d2","52c0712ee75ab130e8ec4962a2fdde8009c90ba444cc580f9e77ae8944937849","4ce7b03eb03e1ec8c2a6cb9cb2c46388d139fb7ae200eb73abac2223f7a859af","2887685205ea8dc6924cca12eba9544e2a1e404cab28582d95d5bfba4b8dcaca","a035f9f2d28965bba5527c85ca88d84c4202ada6d488725b58c02826281bcb40","50d3dfd8b7a4a3a971f57276b6cc04081241efee4a20dbf1857dd13994d01105","378d4fb01cbf160bfeafdd5c8cfae0b429eb650d115fd927da6655340b801504","d44428fae45e4e2232bc5744fabd595b7ba2f10b64baeeccaaee2ebd98b65339","48a9138c50bcc7f29d92e51768cceaf024895ee50aa466808c86963d0d894878","fa732896a33b37b382a45ec29c9554839fda910c9f51b9d87f100bc47bc33ce5","dfce845bdf5aa550db184f52f4e0263fbac285b004534bd8171221a8139579fc","cbcce8ef12568c9ac5791c6be7d9b1f8103b39d8e048fdfa52a022dd3b5ef91d","a141d6be3ce182d1e546ec4e364d2d0ed3130d69855fafa88893cd5cb06eef1e"];
+
+const R2_STAGES = [
+  {name:"Stage 1", type:"Caesar cipher (shift 4)", given:"JMVIAEPP"},
+  {name:"Stage 2", type:"Base64", given:"UEhJU0hJTkc="},
+  {name:"Stage 3", type:"Hexadecimal (ASCII)", given:"4d414c57415245"},
+  {name:"Stage 4", type:"Morse code", given:". -. -.-. .-. -.-- .--."},
+  {name:"Stage 5", type:"Vigenère cipher (key: CYBER)", given:"EYQXLTCULVHJBK"}
+];
+const R2_HASHES = ["5aadf1503c14f822f93090ca763887a102e28d0a4116400d0e0d417ff82de380","b9082dc517dd130ff09d5f7644c8ab226e5ed4ec516a24cbe4d5e3fe583f23e2","ebea9717598ef5abea6ecfbaaf55d0d596110f58dd271485a12bb47c0894d27d","903b786326adb4a2aa76f30d24226b580039b91447a2b815f5fe53b306cab1e6","2af5d6bc160f39a2dfa480658255c6e078bcaf1289b8995c7e6e1cf0d9caaaf3"];
+
+const R3_SNIPPETS = [
+  {id:"A", title:"SQL Injection — login check (pseudo-code)", code:'query = "SELECT * FROM users WHERE username = \'" + userInput + "\'\\n         AND password = \'" + passInput + "\'"'},
+  {id:"B", title:"Credential handling", code:'ADMIN_PASSWORD = "admin123"\\nhashed = md5(userPassword)'},
+  {id:"C", title:"User-controlled output", code:'<p>Welcome, ${request.getParameter("name")}</p>'}
+];
+
+const R4_FLAGS = [
+  {id:1, name:"Flag 1 — OSINT", desc:"A suspect's social profile is on the table. Piece together two details from the bio to form the flag.", dossier:"<b>Name:</b> Rohan Verma<br><b>Bio:</b> \"Cybersecurity enthusiast. Loves CTFs and chess.\"<br><b>Workplace (claimed):</b> Nimbus Cloud Solutions<br><b>Joined:</b> 2021<br><b>Contact:</b> rohan.v3rma@gmail.com"},
+  {id:2, name:"Flag 2 — Steganography", desc:"A harmless-looking station photo is hiding something in its metadata. Check the EXIF comment field — or just scroll to the end of the raw bytes.", dossier:"[ station_photo.jpg — provided by Technical Support at your station ]"},
+  {id:3, name:"Flag 3 — Log Analysis", desc:"A 30–40 line access log sits at your station. One IP fails login again and again in under a minute, then succeeds. That IP is the flag.", dossier:"203.0.113.45 - - [23/Sep/2026:10:14:01] \"POST /login HTTP/1.1\" 401<br>198.51.100.7 - - [23/Sep/2026:10:14:03] \"GET /home HTTP/1.1\" 200<br>203.0.113.45 - - [23/Sep/2026:10:14:05] \"POST /login HTTP/1.1\" 401<br>… (repeats, then succeeds on the 7th try)"},
+  {id:4, name:"Flag 4 — File Forensics", desc:"A password-protected archive at your station holds flag.txt. The password is something you've already solved tonight — Round 2 saw it first.", dossier:"station.zip — locked with a Round 2 answer. Think back to Stage 1."}
+];
+const R4_HASHES = ["a18c18e08b2263348a1f283248742547c439fc040536281c3bc6d7785155aa65","776fa1618bedc6cbc3f486aa24ba52287883cd50c472eaf09d45674bf068052c","60710d4463c599c9048cc0ce6d255a193a5b95539f1e9a951bd8ed72de8b482e","e67056f296d90d194313472dfbd344c0a30bc7c7bce44ff8f524ccd6a8be02f7"];
+
+const LEAK_LINES = [
+  "Detectives — word from HQ: our suspect changed jobs the same year he joined that mysterious cloud company. Cross-check your dates.",
+  "Second bulletin: security just flagged one visitor who couldn't get the door open on the first six tries. The seventh time was the charm."
+];
+
+const ROUND_DURATIONS = {2: 25*60, 3: 30*60, 4: 35*60};
+const LEAK_OFFSETS = [10*60, 22*60];
+
+/* =========================================================
+   HASH HELPER
+   ========================================================= */
+async function sha256(str){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+/* =========================================================
+   STORAGE HELPERS  (window.storage — shared across all teams)
+   ========================================================= */
+async function getEventState(){
+  try{
+    const r = await window.storage.get("event:state", true);
+    return r ? JSON.parse(r.value) : defaultEventState();
+  }catch(e){ return defaultEventState(); }
+}
+function defaultEventState(){
+  return {liveRound:0, r2Start:null, r3Start:null, r4Start:null, leaksFired:[false,false], leaderboardRevealed:false};
+}
+async function setEventState(state){
+  await window.storage.set("event:state", JSON.stringify(state), true);
+}
+async function getTeam(id){
+  try{
+    const r = await window.storage.get("team:"+id, true);
+    return r ? JSON.parse(r.value) : null;
+  }catch(e){ return null; }
+}
+async function setTeam(team){
+  await window.storage.set("team:"+team.id, JSON.stringify(team), true);
+}
+async function getAllTeams(){
+  try{
+    const list = await window.storage.list("team:", true);
+    if(!list || !list.keys) return [];
+    const teams = [];
+    for(const k of list.keys){
+      try{
+        const r = await window.storage.get(k, true);
+        if(r) teams.push(JSON.parse(r.value));
+      }catch(e){}
+    }
+    return teams;
+  }catch(e){ return []; }
+}
+function blankTeam(id,name){
+  return {
+    id: id, name: name, createdAt: Date.now(),
+    r1:{done:false, score:0, answers:[]},
+    r2:{done:false, score:0, solvedStages:0, stageTimestamps:[], finishedAt:null},
+    r3:{submitted:false, judged:false, writeups:[], scores:[0,0,0]},
+    r4:{done:false, score:0, solvedFlags:[false,false,false,false], finishedAt:null}
+  };
+}
+function totalScore(t){
+  return (t.r1?.score||0)+(t.r2?.score||0)+(t.r3?.scores?.reduce((a,b)=>a+b,0)||0)+(t.r4?.score||0);
+}
+
+/* =========================================================
+   AUDIO (synthesized, no external files)
+   ========================================================= */
+let actx;
+function ac(){ if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)(); return actx; }
+function beep(freq, dur, type, vol){
+  try{
+    const c = ac(); const o = c.createOscillator(); const g = c.createGain();
+    o.type = type||"square"; o.frequency.value = freq;
+    g.gain.value = vol||0.05;
+    o.connect(g); g.connect(c.destination);
+    o.start(); g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+(dur||0.15));
+    o.stop(c.currentTime+(dur||0.15)+0.02);
+  }catch(e){}
+}
+function sfxTick(){ beep(880,0.08,"square",0.04); }
+function sfxChime(){ beep(660,0.12,"sine",0.06); setTimeout(()=>beep(990,0.18,"sine",0.06),90); }
+function sfxCorrect(){ beep(520,0.1,"sine",0.06); setTimeout(()=>beep(780,0.14,"sine",0.06),80); }
+function sfxWrong(){ beep(160,0.18,"sawtooth",0.05); }
+function sfxFanfare(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,0.22,"sine",0.07), i*120)); }
+function sfxStinger(){ beep(120,0.4,"sawtooth",0.07); setTimeout(()=>beep(90,0.5,"sawtooth",0.06),150); }
+
+/* =========================================================
+   MATRIX BACKGROUND CANVAS
+   ========================================================= */
+const canvas = document.getElementById("bgCanvas");
+const ctx = canvas.getContext("2d");
+let cols, drops;
+const CHARS = "01アイウエオカキクケコサシスセソ$#@&%*<>/\\{}[]";
+function resizeCanvas(){
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  cols = Math.floor(canvas.width/18);
+  drops = new Array(cols).fill(0).map(()=>Math.random()*-100);
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+function currentAccentColor(){
+  const theme = document.body.getAttribute("data-theme");
+  return {r1:"#3CFF9E", r2:"#35D6FF", r3:"#FF5B4D", r4:"#B98CFF"}[theme] || "#3CFF9E";
+}
+function drawMatrix(){
+  ctx.fillStyle = "rgba(7,11,16,0.13)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.font = "15px monospace";
+  const col = currentAccentColor();
+  for(let i=0;i<cols;i++){
+    const ch = CHARS[Math.floor(Math.random()*CHARS.length)];
+    ctx.fillStyle = col;
+    ctx.globalAlpha = 0.55;
+    ctx.fillText(ch, i*18, drops[i]*18);
+    ctx.globalAlpha = 1;
+    if(drops[i]*18 > canvas.height && Math.random()>0.975) drops[i]=0;
+    drops[i]++;
+  }
+  requestAnimationFrame(drawMatrix);
+}
+drawMatrix();
+
+/* =========================================================
+   ROUTER
+   ========================================================= */
+let currentScreen = "landing";
+let currentTeam = null;
+let pollTimer = null;
+
+function go(name){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  const el = document.getElementById("screen-"+name);
+  if(el) el.classList.add("active");
+  currentScreen = name;
+  window.scrollTo({top:0, behavior:"instant"});
+
+  const themeMap = {round1:"r1", round2:"r2", round3:"r3", round4:"r4"};
+  document.body.setAttribute("data-theme", themeMap[name] || "r1");
+
+  document.querySelectorAll(".navlink").forEach(n=>n.classList.remove("active"));
+
+  if(name==="dashboard" && !currentTeam){ go("login"); return; }
+  if(name==="round1") enterRound1();
+  if(name==="round2") enterRound2();
+  if(name==="round3") enterRound3();
+  if(name==="round4") enterRound4();
+  if(name==="dashboard") refreshDashboard();
+  if(name==="leaderboard") { renderLeaderboard(); startPolling(); }
+  if(name==="admin") { document.getElementById("adminGate").style.display="block"; document.getElementById("adminPanel").style.display="none"; }
+  if(name!=="leaderboard" && name!=="round4") stopPolling();
+}
+function startPolling(){
+  stopPolling();
+  pollTimer = setInterval(()=>{
+    if(currentScreen==="leaderboard") renderLeaderboard();
+    if(currentScreen==="round4") checkLeaks();
+    if(currentScreen==="dashboard") refreshDashboard();
+    updateLiveStateBadge();
+  }, 4000);
+}
+function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
+
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 2600);
+}
+
+async function updateLiveStateBadge(){
+  const st = await getEventState();
+  const badge = document.getElementById("liveState");
+  const txt = document.getElementById("liveStateText");
+  const names = {0:"STANDBY",1:"ROUND 1 LIVE",2:"ROUND 2 LIVE",3:"ROUND 3 LIVE",4:"ROUND 4 LIVE",5:"EVENT CLOSED"};
+  txt.textContent = names[st.liveRound] || "STANDBY";
+  if(st.liveRound>=1 && st.liveRound<=4) badge.classList.add("on"); else badge.classList.remove("on");
+}
+updateLiveStateBadge();
+setInterval(updateLiveStateBadge, 6000);
+
+/* =========================================================
+   LOGIN
+   ========================================================= */
+async function handleLogin(){
+  const idRaw = document.getElementById("loginTeamId").value.trim();
+  const nameRaw = document.getElementById("loginTeamName").value.trim();
+  const err = document.getElementById("loginErr");
+  err.classList.remove("show");
+  if(!idRaw){ err.textContent = "Enter a team ID first."; err.classList.add("show"); return; }
+  const id = idRaw.toUpperCase().replace(/[^A-Z0-9\-]/g,"");
+  if(!id){ err.textContent = "Use letters, numbers or hyphens for your team ID."; err.classList.add("show"); return; }
+
+  let team = await getTeam(id);
+  if(team){
+    currentTeam = team;
+    toast("Welcome back, "+team.name);
+  } else {
+    if(!nameRaw){ err.textContent = "New team — enter a team name to register."; err.classList.add("show"); return; }
+    team = blankTeam(id, nameRaw);
+    await setTeam(team);
+    currentTeam = team;
+    toast("Team registered — good luck, "+team.name);
+  }
+  document.getElementById("navDashBtn").style.display = "inline-block";
+  document.getElementById("navLoginBtn").textContent = currentTeam.id;
+  go("dashboard");
+}
+function logout(){
+  currentTeam = null;
+  document.getElementById("navDashBtn").style.display = "none";
+  document.getElementById("navLoginBtn").textContent = "team login";
+  go("landing");
+}
+
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
+async function refreshDashboard(){
+  if(!currentTeam) return;
+  const t = await getTeam(currentTeam.id);
+  if(t) currentTeam = t;
+  document.getElementById("dashChip").textContent = currentTeam.id.slice(0,2);
+  document.getElementById("dashTeamName").textContent = currentTeam.name;
+  document.getElementById("dashTeamId").textContent = "ID "+currentTeam.id;
+  document.getElementById("dashTotal").textContent = totalScore(currentTeam);
+  document.getElementById("dashR1").innerHTML = currentTeam.r1.score+'<span style="font-size:13px;color:var(--text-faint);"> / 80</span>';
+  document.getElementById("dashR2").innerHTML = currentTeam.r2.score+'<span style="font-size:13px;color:var(--text-faint);"> / 25</span>';
+  const r3total = currentTeam.r3.scores.reduce((a,b)=>a+b,0);
+  document.getElementById("dashR3").innerHTML = r3total+'<span style="font-size:13px;color:var(--text-faint);"> / 24</span>';
+  document.getElementById("dashR4").innerHTML = currentTeam.r4.score+'<span style="font-size:13px;color:var(--text-faint);"> / 50</span>';
+
+  const st = await getEventState();
+  setDashState("dashR1State", currentTeam.r1.done ? "done" : (st.liveRound>=1 ? "live":"locked"), currentTeam.r1.done?"complete":(st.liveRound>=1?"live now":"locked"));
+  setDashState("dashR2State", currentTeam.r2.done ? "done" : (st.liveRound>=2 ? "live":"locked"), currentTeam.r2.done?"complete":(st.liveRound>=2?"live now":"locked"));
+  setDashState("dashR3State", currentTeam.r3.judged ? "done" : (currentTeam.r3.submitted ? "pending" : (st.liveRound>=3 ? "live":"locked")), currentTeam.r3.judged?"complete":(currentTeam.r3.submitted?"awaiting judge":(st.liveRound>=3?"live now":"locked")));
+  setDashState("dashR4State", currentTeam.r4.done ? "done" : (st.liveRound>=4 ? "live":"locked"), currentTeam.r4.done?"complete":(st.liveRound>=4?"live now":"locked"));
+
+  const btn = document.getElementById("dashEnterBtn");
+  const map = {1:"round1",2:"round2",3:"round3",4:"round4"};
+  if(st.liveRound>=1 && st.liveRound<=4){
+    btn.style.display = "inline-flex";
+    btn.textContent = "Start Quiz →";
+    btn.onclick = ()=>go(map[st.liveRound]);
+  } else {
+    btn.style.display = "none";
+  }
+}
+function setDashState(elId, cls, label){
+  const el = document.getElementById(elId);
+  el.className = "pstate "+cls;
+  el.textContent = label;
+}
+async function enterLiveRound(){
+  const st = await getEventState();
+  const map = {1:"round1",2:"round2",3:"round3",4:"round4"};
+  if(map[st.liveRound]) go(map[st.liveRound]);
+}
+
+/* =========================================================
+   ROUND 1 — CYBER QUIZ
+   ========================================================= */
+let r1State = { qi:0, score:0, timer:null, timeLeft:30, locked:false };
+
+async function enterRound1(){
+  if(!currentTeam){ go("login"); return; }
+  const st = await getEventState();
+  document.getElementById("r1Locked").style.display = "none";
+  document.getElementById("r1Play").style.display = "none";
+  document.getElementById("r1Done").style.display = "none";
+
+  const t = await getTeam(currentTeam.id); currentTeam = t;
+  if(currentTeam.r1.done){
+    document.getElementById("r1Done").style.display = "block";
+    document.getElementById("r1DoneScore").textContent = "You scored "+currentTeam.r1.score+" / 80. Waiting for Round 2 to open.";
+    return;
+  }
+  if(st.liveRound < 1){
+    document.getElementById("r1Locked").style.display = "block";
+    return;
+  }
+  document.getElementById("r1Play").style.display = "block";
+  r1State = { qi:0, score:0, timer:null, timeLeft:30, locked:false };
+  showR1Question();
+}
+
+function showR1Question(){
+  if(r1State.qi >= R1_QUESTIONS.length){ finishR1(); return; }
+  const q = R1_QUESTIONS[r1State.qi];
+  document.getElementById("r1QIndex").textContent = "Question "+(r1State.qi+1)+" / 20";
+  document.getElementById("r1QScore").textContent = "Score: "+r1State.score;
+  document.getElementById("r1QText").textContent = q.q;
+  const opts = document.getElementById("r1Opts");
+  opts.innerHTML = "";
+  const letters = ["A","B","C","D"];
+  q.opts.forEach((optText, idx)=>{
+    const div = document.createElement("div");
+    div.className = "qopt";
+    div.innerHTML = '<span class="qk">'+letters[idx]+'</span><span>'+optText+'</span>';
+    div.onclick = ()=>pickR1Answer(idx);
+    opts.appendChild(div);
+  });
+  r1State.locked = false;
+  r1State.timeLeft = 30;
+  updateR1Bar();
+  if(r1State.timer) clearInterval(r1State.timer);
+  r1State.timer = setInterval(()=>{
+    r1State.timeLeft--;
+    updateR1Bar();
+    if(r1State.timeLeft<=5 && r1State.timeLeft>0) sfxTick();
+    if(r1State.timeLeft<=0){
+      clearInterval(r1State.timer);
+      lockR1Options();
+      setTimeout(nextR1Question, 900);
+    }
+  }, 1000);
+}
+function updateR1Bar(){
+  const pct = Math.max(0,(r1State.timeLeft/30)*100);
+  const bar = document.getElementById("r1Bar");
+  bar.style.width = pct+"%";
+  bar.style.background = r1State.timeLeft<=5 ? "var(--danger)" : "var(--accent)";
+}
+async function pickR1Answer(idx){
+  if(r1State.locked) return;
+  r1State.locked = true;
+  clearInterval(r1State.timer);
+  const idxHash = await sha256(SALT+("q"+(r1State.qi+1)+":"+idx));
+  const correct = idxHash === R1_HASHES[r1State.qi];
+  const opts = document.querySelectorAll("#r1Opts .qopt");
+  opts.forEach((o,i)=>{ o.classList.add("disabled"); if(i===idx) o.classList.add("picked"); });
+  if(correct){ r1State.score += 4; sfxCorrect(); } else { sfxWrong(); }
+  lockR1Options();
+  setTimeout(nextR1Question, 700);
+}
+function lockR1Options(){
+  document.querySelectorAll("#r1Opts .qopt").forEach(o=>o.classList.add("disabled"));
+}
+async function nextR1Question(){
+  r1State.qi++;
+  if([5,10,15].includes(r1State.qi)){
+    await showR1Peek();
+  }
+  showR1Question();
+}
+async function showR1Peek(){
+  const overlay = document.getElementById("r1Peek");
+  const rows = document.getElementById("r1PeekRows");
+  const teams = await getAllTeams();
+  teams.sort((a,b)=> totalScore(b)-totalScore(a));
+  const top3 = teams.slice(0,3);
+  rows.innerHTML = top3.length ? top3.map((t,i)=>
+    '<div class="peek-row"><span>'+(i+1)+'. '+t.name+'</span><span>'+totalScore(t)+' pts</span></div>'
+  ).join("") : '<div class="peek-row"><span>Standings building...</span><span>—</span></div>';
+  overlay.style.display = "flex";
+  await new Promise(r=>setTimeout(r, 5000));
+  overlay.style.display = "none";
+}
+async function finishR1(){
+  currentTeam.r1.done = true;
+  currentTeam.r1.score = r1State.score;
+  await setTeam(currentTeam);
+  document.getElementById("r1Play").style.display = "none";
+  document.getElementById("r1Done").style.display = "block";
+  document.getElementById("r1DoneScore").textContent = "You scored "+r1State.score+" / 80. Waiting for Round 2 to open.";
+}
+
+/* =========================================================
+   ROUND 2 — CRYPTO CRACK
+   ========================================================= */
+let r2Timer = null;
+async function enterRound2(){
+  if(!currentTeam){ go("login"); return; }
+  clearInterval(r2Timer);
+  const st = await getEventState();
+  const t = await getTeam(currentTeam.id); currentTeam = t;
+
+  document.getElementById("r2Locked").style.display = "none";
+  document.getElementById("r2Play").style.display = "none";
+  document.getElementById("r2Done").style.display = "none";
+
+  if(currentTeam.r2.done){
+    document.getElementById("r2Done").style.display = "block";
+    document.getElementById("r2DoneScore").textContent = "You scored "+currentTeam.r2.score+" / 25. Waiting for Round 3.";
+    return;
+  }
+  if(st.liveRound < 2 || !st.r2Start){
+    document.getElementById("r2Locked").style.display = "block";
+    return;
+  }
+  document.getElementById("r2Play").style.display = "block";
+  renderR2Stages();
+  r2Timer = setInterval(()=>tickRoundTimer("r2Timer", st.r2Start, ROUND_DURATIONS[2], async ()=>{ await autoFinishR2(); }), 1000);
+  tickRoundTimer("r2Timer", st.r2Start, ROUND_DURATIONS[2], async ()=>{ await autoFinishR2(); });
+}
+function renderR2Stages(){
+  const wrap = document.getElementById("r2Stages");
+  wrap.innerHTML = "";
+  const solvedCount = currentTeam.r2.solvedStages;
+  R2_STAGES.forEach((stage, i)=>{
+    const solved = i < solvedCount;
+    const unlocked = i <= solvedCount;
+    const div = document.createElement("div");
+    div.className = "stage"+(unlocked?" unlocked":"")+(solved?" solved":"");
+    div.innerHTML = `
+      <div class="stage-top"><span class="sname">${stage.name}</span><span class="stype">${stage.type}</span></div>
+      <div class="given">${stage.given}</div>
+      ${solved ? '<div class="solved-tag">✓ solved</div>' : (unlocked ? `
+        <div class="stage-input-row">
+          <input type="text" id="r2input-${i}" placeholder="Type the decoded answer...">
+          <button class="btn primary" onclick="submitR2Stage(${i})">Submit</button>
+        </div>` : '<div style="font-size:12px;color:var(--text-faint);">Solve the previous stage to unlock</div>')}
+    `;
+    wrap.appendChild(div);
+    if(unlocked && !solved){
+      const inp = div.querySelector("input");
+      if(inp) inp.addEventListener("keydown", e=>{ if(e.key==="Enter") submitR2Stage(i); });
+    }
+  });
+}
+async function submitR2Stage(i){
+  const inp = document.getElementById("r2input-"+i);
+  const val = inp.value.trim().toUpperCase();
+  if(!val){ toast("Type an answer first"); return; }
+  const hash = await sha256(SALT+val);
+  if(hash === R2_HASHES[i]){
+    sfxChime();
+    currentTeam.r2.solvedStages = i+1;
+    currentTeam.r2.stageTimestamps[i] = Date.now();
+    currentTeam.r2.score = currentTeam.r2.solvedStages*4;
+    if(currentTeam.r2.solvedStages === 5){
+      currentTeam.r2.done = true;
+      currentTeam.r2.finishedAt = Date.now();
+    }
+    await setTeam(currentTeam);
+    if(currentTeam.r2.done){
+      document.getElementById("r2Play").style.display = "none";
+      document.getElementById("r2Done").style.display = "block";
+      document.getElementById("r2DoneScore").textContent = "You solved all 5 stages — "+currentTeam.r2.score+" / 20 base points scored. Fastest-3 bonus (+5) is confirmed by judges after the round.";
+      clearInterval(r2Timer);
+    } else {
+      renderR2Stages();
+      toast("Stage "+(i+1)+" cracked");
+    }
+  } else {
+    sfxWrong();
+    toast("Not quite — try again");
+  }
+}
+async function autoFinishR2(){
+  currentTeam.r2.done = true;
+  currentTeam.r2.score = currentTeam.r2.solvedStages*4;
+  await setTeam(currentTeam);
+  clearInterval(r2Timer);
+  document.getElementById("r2Play").style.display = "none";
+  document.getElementById("r2Done").style.display = "block";
+  document.getElementById("r2DoneScore").textContent = "Time's up. You scored "+currentTeam.r2.score+" / 25.";
+}
+
+/* =========================================================
+   ROUND 3 — BUG & VULNERABILITY HUNT
+   ========================================================= */
+let r3Timer = null;
+async function enterRound3(){
+  if(!currentTeam){ go("login"); return; }
+  clearInterval(r3Timer);
+  const st = await getEventState();
+  const t = await getTeam(currentTeam.id); currentTeam = t;
+
+  document.getElementById("r3Locked").style.display = "none";
+  document.getElementById("r3Play").style.display = "none";
+  document.getElementById("r3Done").style.display = "none";
+
+  if(currentTeam.r3.submitted){
+    document.getElementById("r3Done").style.display = "block";
+    if(currentTeam.r3.judged){
+      const s = currentTeam.r3.scores.reduce((a,b)=>a+b,0);
+      document.getElementById("r3DoneTitle").textContent = "Judged";
+      document.getElementById("r3DoneScore").textContent = "You scored "+s+" / 24.";
+    } else {
+      document.getElementById("r3DoneTitle").textContent = "Submitted — awaiting judge review";
+      document.getElementById("r3DoneScore").textContent = "Your write-ups are with the judges. Check back on your dashboard for the score.";
+    }
+    return;
+  }
+  if(st.liveRound < 3 || !st.r3Start){
+    document.getElementById("r3Locked").style.display = "block";
+    return;
+  }
+  document.getElementById("r3Play").style.display = "block";
+  renderR3Snippets();
+  r3Timer = setInterval(()=>tickRoundTimer("r3Timer", st.r3Start, ROUND_DURATIONS[3], async ()=>{ await autoSubmitR3(); }),1000);
+  tickRoundTimer("r3Timer", st.r3Start, ROUND_DURATIONS[3], async ()=>{ await autoSubmitR3(); });
+}
+function renderR3Snippets(){
+  const wrap = document.getElementById("r3Snippets");
+  wrap.innerHTML = R3_SNIPPETS.map((s,i)=>`
+    <div class="snippet-card">
+      <div class="snippet-head"><span class="sid">Snippet ${s.id}</span><span style="font-size:12px;color:var(--text-faint);">8 pts</span></div>
+      <div style="font-size:13px;color:var(--text-dim);margin-bottom:10px;">${s.title}</div>
+      <pre class="code">${s.code.replace(/\\n/g,"\n")}</pre>
+      <div class="subfield"><label>Vulnerability name</label><input type="text" id="r3-${i}-name" placeholder="e.g. SQL Injection"></div>
+      <div class="subfield"><label>Risk — what could an attacker do?</label><textarea id="r3-${i}-risk" placeholder="1–2 lines"></textarea></div>
+      <div class="subfield"><label>Fix</label><textarea id="r3-${i}-fix" placeholder="Corrected approach or snippet"></textarea></div>
+    </div>
+  `).join("");
+}
+async function submitR3(){
+  const writeups = R3_SNIPPETS.map((s,i)=>({
+    id:s.id,
+    name: document.getElementById("r3-"+i+"-name").value.trim(),
+    risk: document.getElementById("r3-"+i+"-risk").value.trim(),
+    fix: document.getElementById("r3-"+i+"-fix").value.trim()
+  }));
+  const empty = writeups.filter(w=>!w.name && !w.risk && !w.fix);
+  if(empty.length === writeups.length){ toast("Fill in at least one snippet before submitting"); return; }
+  currentTeam.r3.writeups = writeups;
+  currentTeam.r3.submitted = true;
+  currentTeam.r3.submittedAt = Date.now();
+  await setTeam(currentTeam);
+  clearInterval(r3Timer);
+  document.getElementById("r3Play").style.display = "none";
+  document.getElementById("r3Done").style.display = "block";
+  document.getElementById("r3DoneTitle").textContent = "Submitted — awaiting judge review";
+  document.getElementById("r3DoneScore").textContent = "Your write-ups are with the judges. Check back on your dashboard for the score.";
+}
+async function autoSubmitR3(){
+  if(currentTeam.r3.submitted) return;
+  const writeups = R3_SNIPPETS.map((s,i)=>{
+    const nameEl = document.getElementById("r3-"+i+"-name");
+    return {
+      id:s.id,
+      name: nameEl ? nameEl.value.trim() : "",
+      risk: document.getElementById("r3-"+i+"-risk") ? document.getElementById("r3-"+i+"-risk").value.trim() : "",
+      fix: document.getElementById("r3-"+i+"-fix") ? document.getElementById("r3-"+i+"-fix").value.trim() : ""
+    };
+  });
+  currentTeam.r3.writeups = writeups;
+  currentTeam.r3.submitted = true;
+  currentTeam.r3.submittedAt = Date.now();
+  await setTeam(currentTeam);
+  clearInterval(r3Timer);
+  document.getElementById("r3Play").style.display = "none";
+  document.getElementById("r3Done").style.display = "block";
+  document.getElementById("r3DoneTitle").textContent = "Time's up — submitted for judging";
+  document.getElementById("r3DoneScore").textContent = "Your write-ups are with the judges. Check back on your dashboard for the score.";
+}
+
+/* =========================================================
+   ROUND 4 — CYBER DETECTIVE / CTF
+   ========================================================= */
+let r4Timer = null;
+async function enterRound4(){
+  if(!currentTeam){ go("login"); return; }
+  clearInterval(r4Timer);
+  const st = await getEventState();
+  const t = await getTeam(currentTeam.id); currentTeam = t;
+
+  document.getElementById("r4Locked").style.display = "none";
+  document.getElementById("r4Play").style.display = "none";
+  document.getElementById("r4Done").style.display = "none";
+
+  if(currentTeam.r4.done){
+    document.getElementById("r4Done").style.display = "block";
+    document.getElementById("r4DoneScore").textContent = "You scored "+currentTeam.r4.score+" / 50. Sit tight for the final tally.";
+    return;
+  }
+  if(st.liveRound < 4 || !st.r4Start){
+    document.getElementById("r4Locked").style.display = "block";
+    return;
+  }
+  document.getElementById("r4Play").style.display = "block";
+  renderR4Flags();
+  r4Timer = setInterval(()=>tickRoundTimer("r4Timer", st.r4Start, ROUND_DURATIONS[4], async ()=>{ await autoFinishR4(); }),1000);
+  tickRoundTimer("r4Timer", st.r4Start, ROUND_DURATIONS[4], async ()=>{ await autoFinishR4(); });
+  startPolling();
+}
+function renderR4Flags(){
+  const wrap = document.getElementById("r4Flags");
+  wrap.innerHTML = R4_FLAGS.map((f,i)=>{
+    const solved = currentTeam.r4.solvedFlags[i];
+    return `
+    <div class="flag-card ${solved?'solved':''}">
+      <div class="flag-top"><span class="fname">${f.name}</span><span class="fpts">10 pts</span></div>
+      <div class="flag-desc">${f.desc}</div>
+      <div class="dossier">${f.dossier}</div>
+      ${solved ? '<div class="solved-tag" style="color:var(--violet);">✓ flag captured</div>' : `
+        <div class="flag-input-row">
+          <input type="text" id="r4input-${i}" placeholder="CyberClash{...}">
+          <button class="btn primary" onclick="submitR4Flag(${i})">Submit</button>
+        </div>`}
+    </div>`;
+  }).join("");
+  document.getElementById("r4Count").textContent = currentTeam.r4.solvedFlags.filter(Boolean).length;
+}
+async function submitR4Flag(i){
+  const inp = document.getElementById("r4input-"+i);
+  const val = inp.value.trim();
+  if(!val){ toast("Enter a flag first"); return; }
+  const hash = await sha256(SALT+val);
+  if(hash === R4_HASHES[i]){
+    sfxCorrect();
+    currentTeam.r4.solvedFlags[i] = true;
+    currentTeam.r4.score = currentTeam.r4.solvedFlags.filter(Boolean).length*10;
+    if(currentTeam.r4.solvedFlags.every(Boolean)){
+      currentTeam.r4.done = true;
+      currentTeam.r4.finishedAt = Date.now();
+      sfxFanfare();
+    }
+    await setTeam(currentTeam);
+    if(currentTeam.r4.done){
+      document.getElementById("r4Play").style.display = "none";
+      document.getElementById("r4Done").style.display = "block";
+      document.getElementById("r4DoneScore").textContent = "You scored "+currentTeam.r4.score+" / 40 base points. First-team-to-finish bonus (+10) confirmed by judges after the round.";
+      clearInterval(r4Timer);
+    } else {
+      renderR4Flags();
+      toast("Flag captured");
+    }
+  } else {
+    sfxWrong();
+    toast("Incorrect flag — keep digging");
+  }
+}
+async function autoFinishR4(){
+  currentTeam.r4.done = true;
+  currentTeam.r4.score = currentTeam.r4.solvedFlags.filter(Boolean).length*10;
+  await setTeam(currentTeam);
+  clearInterval(r4Timer);
+  document.getElementById("r4Play").style.display = "none";
+  document.getElementById("r4Done").style.display = "block";
+  document.getElementById("r4DoneScore").textContent = "Time's up. You scored "+currentTeam.r4.score+" / 50.";
+}
+
+let leaksShown = [false,false];
+async function checkLeaks(){
+  if(currentScreen !== "round4") return;
+  const st = await getEventState();
+  if(!st.r4Start) return;
+  const elapsed = (Date.now() - st.r4Start)/1000;
+  LEAK_OFFSETS.forEach((offset, i)=>{
+    if(elapsed >= offset && !leaksShown[i]){
+      leaksShown[i] = true;
+      fireLeak(i);
+    }
+  });
+}
+function fireLeak(i){
+  const banner = document.getElementById("leakBanner");
+  document.getElementById("leakText").textContent = LEAK_LINES[i];
+  sfxStinger();
+  banner.classList.add("show");
+  setTimeout(()=>banner.classList.remove("show"), 9000);
+}
+
+/* generic round countdown ticker */
+function tickRoundTimer(elId, startTs, durationSec, onExpire){
+  const el = document.getElementById(elId);
+  if(!el || !startTs) return;
+  const elapsed = (Date.now()-startTs)/1000;
+  const remain = Math.max(0, durationSec-elapsed);
+  const m = Math.floor(remain/60), s = Math.floor(remain%60);
+  el.innerHTML = String(m).padStart(2,"0")+":"+String(s).padStart(2,"0")+'<span>time left</span>';
+  if(remain<=0) onExpire();
+}
+
+/* =========================================================
+   LEADERBOARD
+   ========================================================= */
+async function renderLeaderboard(){
+  const st = await getEventState();
+  document.getElementById("lbUpdated").textContent = "updated "+new Date().toLocaleTimeString();
+  if(!st.leaderboardRevealed){
+    document.getElementById("lbRevealed").style.display = "none";
+    document.getElementById("lbHiddenNote").style.display = "block";
+    return;
+  }
+  document.getElementById("lbRevealed").style.display = "block";
+  document.getElementById("lbHiddenNote").style.display = "none";
+
+  let teams = await getAllTeams();
+  const q = (document.getElementById("lbSearch").value||"").toLowerCase();
+  if(q) teams = teams.filter(t=> t.id.toLowerCase().includes(q) || t.name.toLowerCase().includes(q));
+
+  teams.sort((a,b)=>{
+    const diff = totalScore(b)-totalScore(a);
+    if(diff !== 0) return diff;
+    const at = a.r4.finishedAt || a.r3.submittedAt || a.r2.finishedAt || Infinity;
+    const bt = b.r4.finishedAt || b.r3.submittedAt || b.r2.finishedAt || Infinity;
+    return at-bt;
+  });
+
+  const body = document.getElementById("lbBody");
+  body.innerHTML = teams.map((t,i)=>{
+    const rank = i+1;
+    let medal = "";
+    if(rank===1) medal = '<span class="medal g">1</span>';
+    else if(rank===2) medal = '<span class="medal s">2</span>';
+    else if(rank===3) medal = '<span class="medal b">3</span>';
+    const isMe = currentTeam && currentTeam.id === t.id;
+    const r3total = t.r3.scores.reduce((a,b)=>a+b,0);
+    return `<tr class="${isMe?'me':''}">
+      <td class="rank">${medal}${rank}</td>
+      <td class="tname">${t.name}</td>
+      <td>${t.id}</td>
+      <td>${t.r1.score}</td>
+      <td>${t.r2.score}</td>
+      <td>${r3total}</td>
+      <td>${t.r4.score}</td>
+      <td class="total">${totalScore(t)}</td>
+    </tr>`;
+  }).join("") || '<tr><td colspan="8" style="text-align:center;color:var(--text-faint);">No teams registered yet</td></tr>';
+}
+
+/* =========================================================
+   ADMIN
+   ========================================================= */
+function checkAdminPass(){
+  const val = document.getElementById("adminPass").value;
+  if(val === ADMIN_PASSCODE){
+    document.getElementById("adminGate").style.display = "none";
+    document.getElementById("adminPanel").style.display = "block";
+    refreshAdmin();
+  } else {
+    toast("Wrong passcode");
+  }
+}
+async function refreshAdmin(){
+  const st = await getEventState();
+  document.getElementById("adminLiveRound").textContent = st.liveRound;
+  document.getElementById("adminRevealBtn").textContent = st.leaderboardRevealed ? "revealed — click to hide" : "reveal";
+  document.getElementById("adminRevealBtn").className = "smallbtn"+(st.leaderboardRevealed?" on":"");
+
+  const teams = await getAllTeams();
+  teams.sort((a,b)=>totalScore(b)-totalScore(a));
+
+  const judgeBody = document.getElementById("judgeBody");
+  const submitted = teams.filter(t=>t.r3.submitted);
+  judgeBody.innerHTML = submitted.length ? submitted.map(t=>{
+    const w = t.r3.writeups||[{},{},{}];
+    return `<tr>
+      <td>${t.name} (${t.id})</td>
+      <td>${(w[0]&&(w[0].name+' — '+w[0].risk+' — '+w[0].fix))||'—'}</td>
+      <td>${(w[1]&&(w[1].name+' — '+w[1].risk+' — '+w[1].fix))||'—'}</td>
+      <td>${(w[2]&&(w[2].name+' — '+w[2].risk+' — '+w[2].fix))||'—'}</td>
+      <td><input type="number" min="0" max="8" id="judge-${t.id}-0" value="${t.r3.scores[0]||0}"></td>
+      <td><input type="number" min="0" max="8" id="judge-${t.id}-1" value="${t.r3.scores[1]||0}"></td>
+      <td><input type="number" min="0" max="8" id="judge-${t.id}-2" value="${t.r3.scores[2]||0}"></td>
+      <td><button class="smallbtn" onclick="saveJudgeScore('${t.id}')">Save</button></td>
+    </tr>`;
+  }).join("") : '<tr><td colspan="7" style="color:var(--text-faint);">No submissions yet</td></tr>';
+
+  const teamsBody = document.getElementById("adminTeamsBody");
+  teamsBody.innerHTML = teams.length ? teams.map(t=>{
+    const r3total = t.r3.scores.reduce((a,b)=>a+b,0);
+    return `<tr><td>${t.id}</td><td>${t.name}</td><td>${t.r1.score}</td><td>${t.r2.score}</td><td>${r3total}</td><td>${t.r4.score}</td><td><b>${totalScore(t)}</b></td></tr>`;
+  }).join("") : '<tr><td colspan="7" style="color:var(--text-faint);">No teams yet</td></tr>';
+}
+async function saveJudgeScore(teamId){
+  const a = parseInt(document.getElementById("judge-"+teamId+"-0").value)||0;
+  const b = parseInt(document.getElementById("judge-"+teamId+"-1").value)||0;
+  const c = parseInt(document.getElementById("judge-"+teamId+"-2").value)||0;
+  const team = await getTeam(teamId);
+  team.r3.scores = [Math.min(8,a),Math.min(8,b),Math.min(8,c)];
+  team.r3.judged = true;
+  await setTeam(team);
+  toast("Score saved for "+teamId);
+  refreshAdmin();
+}
+async function adminSetRound(n){
+  const st = await getEventState();
+  st.liveRound = n;
+  if(n===2 && !st.r2Start) st.r2Start = Date.now();
+  if(n===3 && !st.r3Start) st.r3Start = Date.now();
+  if(n===4 && !st.r4Start) { st.r4Start = Date.now(); leaksShown=[false,false]; }
+  await setEventState(st);
+  toast("Live round set to "+n);
+  refreshAdmin();
+  updateLiveStateBadge();
+}
+async function toggleReveal(){
+  const st = await getEventState();
+  st.leaderboardRevealed = !st.leaderboardRevealed;
+  await setEventState(st);
+  refreshAdmin();
+}
+async function adminResetAll(){
+  if(!confirm("This wipes the live round state and leaderboard reveal flag (not team scores). Continue?")) return;
+  await setEventState(defaultEventState());
+  toast("Event state reset");
+  refreshAdmin();
+}
+
+/* =========================================================
+   INIT
+   ========================================================= */
+document.addEventListener("keydown", e=>{
+  if(currentScreen==="login" && e.key==="Enter") handleLogin();
+});
+go("landing");
+</script>
+</body>
+</html>

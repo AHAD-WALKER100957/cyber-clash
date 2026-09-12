@@ -24,6 +24,17 @@ if (USE_REDIS) {
   redis = new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL,
     token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    // IMPORTANT: this app already does its own JSON.stringify()/JSON.parse()
+    // around every value (see kvSet/kvGet below and the frontend's
+    // getEventState/getTeam helpers). The @upstash/redis client ALSO tries
+    // to auto-parse JSON on every get() by default, which double-parses our
+    // values into real objects instead of the plain strings the rest of the
+    // app expects — causing every read to silently fail and fall back to
+    // defaults (this is why rounds never appeared to "go live"). Turning
+    // off the client's automatic deserialization makes get() return the
+    // exact same string that was passed to set(), matching what the rest
+    // of this codebase assumes.
+    automaticDeserialization: false,
   });
 }
 
@@ -47,7 +58,13 @@ function writeLocalDb(db) {
 async function kvGet(key) {
   if (USE_REDIS) {
     const value = await redis.get(key);
-    return value === null || value === undefined ? null : value;
+    if (value === null || value === undefined) return null;
+    // Defensive belt-and-suspenders: if the client ever hands back an
+    // already-parsed object/number instead of the raw string we stored
+    // (e.g. automaticDeserialization gets re-enabled by a future config
+    // change), re-stringify it so callers always get back exactly what
+    // they originally passed to kvSet.
+    return typeof value === "string" ? value : JSON.stringify(value);
   }
   const db = readLocalDb();
   return Object.prototype.hasOwnProperty.call(db, key) ? db[key] : null;
